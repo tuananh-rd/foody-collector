@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.venv/
+cache/
+data/
+tests/fixtures/*.html
+tests/fixtures/audit200.csv
+tests/fixtures/price_issues_200.csv
+reports/live/
+work/

@@ -1,0 +1,1133 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FoodTour Hà Nội · Thu Thập Dữ Liệu Địa Điểm</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <!-- Header -->
+  <header class="app-header">
+    <div class="header-content">
+      <div class="header-brand">
+        <h1 class="brand-title">🍽️ FoodTour Hà Nội · Thu Thập Dữ Liệu</h1>
+        <p class="brand-subtitle">
+          Nguồn dữ liệu: <strong>Foody Hà Nội</strong> (<a href="https://www.foody.vn/ha-noi/o-dau" target="_blank" rel="noopener noreferrer">https://www.foody.vn/ha-noi/o-dau</a>) · Ứng dụng cục bộ
+        </p>
+      </div>
+      <div class="header-controls">
+        <div id="browser-readiness-card" class="browser-readiness-card">
+          <div class="readiness-indicator">
+            <span id="browser-indicator-dot" class="indicator-dot dot-checking"></span>
+            <span id="browser-readiness-title" class="readiness-title">Kiểm tra trình duyệt...</span>
+          </div>
+          <p id="browser-readiness-message" class="readiness-message">Đang kiểm tra môi trường trình duyệt tự động</p>
+        </div>
+        <button type="button" id="btn-shutdown" class="btn btn-discreet" title="Lưu tiến độ và thoát ứng dụng">
+          <span class="btn-icon">🚪</span> Thoát ứng dụng
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="main-container">
+    <!-- System Notification Banner -->
+    <div id="system-banner" class="system-banner hidden" role="alert">
+      <span id="system-banner-icon" class="banner-icon">ℹ️</span>
+      <span id="system-banner-text" class="banner-text"></span>
+      <button type="button" id="btn-close-banner" class="btn-close-banner" aria-label="Đóng thông báo">×</button>
+    </div>
+
+    <!-- Top Two-Column Grid: Config & Progress -->
+    <div class="dashboard-grid">
+      <!-- Section 1: Configuration & Controls -->
+      <section class="card config-section" aria-labelledby="heading-config">
+        <div class="card-header">
+          <h2 id="heading-config" class="card-title">⚙️ Thiết Lập Thu Thập</h2>
+          <span class="card-tag">Cấu hình</span>
+        </div>
+
+        <form id="collector-form" class="config-form">
+          <!-- Scope Selection -->
+          <fieldset class="form-group">
+            <legend class="form-label">Phạm vi thu thập:</legend>
+            <div class="segmented-control" role="radiogroup" aria-label="Phạm vi thu thập">
+              <label class="segmented-option">
+                <input type="radio" name="scope-mode" id="mode-sample" value="sample" checked>
+                <span class="segment-label">🎯 Mẫu thử nghiệm (Sample)</span>
+              </label>
+              <label class="segmented-option">
+                <input type="radio" name="scope-mode" id="mode-all" value="all">
+                <span class="segment-label">🌐 Toàn bộ Hà Nội (All)</span>
+              </label>
+            </div>
+            <p id="scope-hint" class="field-hint">Chế độ mẫu giới hạn số lượng quán để kiểm tra nhanh. Chế độ toàn bộ sẽ tự động tải tiếp cho đến hết danh sách.</p>
+          </fieldset>
+
+          <!-- Sample Limit Input -->
+          <div class="form-group" id="group-limit">
+            <label for="input-limit" class="form-label">
+              Số lượng địa điểm cần lấy:
+              <span class="label-badge">Chỉ áp dụng cho mẫu</span>
+            </label>
+            <input type="number" id="input-limit" class="form-input" min="1" max="10000" step="1" value="48">
+            <p class="field-hint">Mặc định: 48 địa điểm. Có thể thay đổi tùy ý theo nhu cầu kiểm thử.</p>
+          </div>
+
+          <!-- Pace / Interval Input -->
+          <div class="form-group" id="group-interval">
+            <label for="input-interval" class="form-label">
+              Khoảng nghỉ giữa các thao tác (giây):
+              <span class="label-badge">Tối thiểu 2.0s</span>
+            </label>
+            <input type="number" id="input-interval" class="form-input" min="2.0" max="60.0" step="0.5" value="3.0">
+            <p class="field-hint">Thời gian chờ giữa các lần cuộn và tải trang nhằm tránh nghẽn mạng (mặc định 3.0s, tối thiểu 2.0s).</p>
+          </div>
+
+          <!-- Visible Browser Toggle -->
+          <div class="form-group">
+            <label class="checkbox-label" for="input-show-browser">
+              <input type="checkbox" id="input-show-browser" class="form-checkbox" checked>
+              <span class="checkbox-custom"></span>
+              <span class="checkbox-text">
+                <strong>Hiển thị cửa sổ trình duyệt thực tế</strong>
+                <small class="d-block text-muted">Mở cửa sổ trình duyệt để bạn trực tiếp quan sát trang và tiến trình tải thêm.</small>
+              </span>
+            </label>
+          </div>
+
+          <!-- Control Action Buttons -->
+          <div class="form-actions">
+            <button type="button" id="btn-start" class="btn btn-primary">
+              <span class="btn-icon">▶</span> Bắt đầu
+            </button>
+            <button type="button" id="btn-pause" class="btn btn-warning" disabled>
+              <span class="btn-icon">⏸</span> Tạm dừng
+            </button>
+            <button type="button" id="btn-resume" class="btn btn-success" disabled>
+              <span class="btn-icon">⏯</span> Tiếp tục
+            </button>
+            <button type="button" id="btn-stop" class="btn btn-danger" disabled>
+              <span class="btn-icon">⏹</span> Dừng lại
+            </button>
+            <button type="button" id="btn-refresh" class="btn btn-secondary" title="Cập nhật trạng thái ngay lập tức">
+              <span class="btn-icon">🔄</span> Làm mới
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <!-- Section 2: Live Progress & Metrics Dashboard -->
+      <section class="card dashboard-section" aria-labelledby="heading-status">
+        <div class="card-header">
+          <h2 id="heading-status" class="card-title">📊 Tiến Trình & Trạng Thái</h2>
+          <div class="job-badges">
+            <span id="badge-job-state" class="badge badge-idle">Chưa hoạt động</span>
+            <span id="badge-job-stage" class="badge badge-secondary">Chờ lệnh</span>
+          </div>
+        </div>
+
+        <!-- Job Meta Details -->
+        <div class="job-meta-bar">
+          <div class="meta-item">
+            <span class="meta-label">Mã phiên:</span>
+            <code id="display-job-id" class="meta-code">Chưa có</code>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Chế độ:</span>
+            <span id="display-job-mode" class="meta-value">--</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Cập nhật lúc:</span>
+            <span id="display-job-updated" class="meta-value">--</span>
+          </div>
+        </div>
+
+        <!-- Termination & Incomplete Notice Box -->
+        <div id="termination-notice" class="termination-box hidden">
+          <div class="termination-header">
+            <span id="termination-icon" class="termination-icon">⚠️</span>
+            <strong id="termination-title" class="termination-title">Kết quả tiến trình</strong>
+            <span id="badge-incomplete" class="badge badge-warning hidden">Chưa hoàn thành đầy đủ</span>
+            <span id="badge-coverage" class="badge badge-info hidden">Đã quét hết danh sách</span>
+          </div>
+          <p id="termination-desc" class="termination-desc"></p>
+        </div>
+
+        <!-- Progress Track -->
+        <div class="progress-section">
+          <div class="progress-info-row">
+            <span id="progress-status-label" class="progress-label">Tiến độ thu thập:</span>
+            <strong id="progress-counter-text" class="progress-value">0 / 48 (0%)</strong>
+          </div>
+          <div class="progress-track" role="progressbar" id="progress-bar-container" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+            <div id="progress-fill" class="progress-fill pct-0"></div>
+          </div>
+          <p id="progress-explanation" class="progress-note">Chọn cấu hình và nhấn "Bắt đầu" để thực hiện.</p>
+        </div>
+
+        <!-- Metrics Grid -->
+        <div class="metrics-grid">
+          <div class="metric-card">
+            <span class="metric-num" id="metric-discovered">0</span>
+            <span class="metric-label">Đã phát hiện URL</span>
+          </div>
+          <div class="metric-card highlight">
+            <span class="metric-num" id="metric-processed">0</span>
+            <span class="metric-label">Đã xử lý xong</span>
+          </div>
+          <div class="metric-card success">
+            <span class="metric-num" id="metric-success">0</span>
+            <span class="metric-label">Thành công</span>
+          </div>
+          <div class="metric-card muted">
+            <span class="metric-num" id="metric-duplicates">0</span>
+            <span class="metric-label">Trùng lặp bỏ qua</span>
+          </div>
+          <div class="metric-card danger">
+            <span class="metric-num" id="metric-failed">0</span>
+            <span class="metric-label">Lỗi / Thất bại</span>
+          </div>
+          <div class="metric-card info">
+            <span class="metric-num" id="metric-clicks">0</span>
+            <span class="metric-label">Lần bấm Tải thêm</span>
+          </div>
+          <div class="metric-card">
+            <span class="metric-num" id="metric-requests">0</span>
+            <span class="metric-label">Lượt tải trang quán</span>
+          </div>
+        </div>
+
+        <!-- Last Status Message -->
+        <div class="status-message-box">
+          <span class="message-label">Thông báo gần nhất:</span>
+          <span id="display-job-message" class="message-content">Hệ thống đang ở trạng thái chờ.</span>
+        </div>
+
+        <!-- Live Activity Log -->
+        <details class="logs-accordion" open>
+          <summary class="logs-summary">
+            <span>📝 Nhật ký hoạt động chi tiết (30 mục gần nhất)</span>
+          </summary>
+          <div id="logs-container" class="logs-container" tabindex="0">
+            <div class="log-entry log-placeholder">Chưa có nhật ký hoạt động.</div>
+          </div>
+        </details>
+      </section>
+    </div>
+
+    <!-- Section 2.5: Compact Quality Overview Panel (v0.3) -->
+    <section class="card quality-section" id="quality-section" aria-labelledby="heading-quality">
+      <div class="card-header quality-header">
+        <div>
+          <h2 id="heading-quality" class="card-title">🛡️ Đánh Giá Chất Lượng Dữ Liệu (v0.3)</h2>
+          <p id="quality-subtitle" class="card-subtitle">
+            Phiên đang xem: <code id="quality-viewing-job" class="meta-code">Chưa có</code>
+          </p>
+        </div>
+        <div class="quality-header-badges">
+          <span id="badge-quality-layer" class="badge badge-info">Dữ liệu chuẩn hóa (v0.3)</span>
+          <span id="badge-quality-fallback" class="badge badge-warning hidden">Chưa kiểm tra chất lượng (phiên cũ)</span>
+        </div>
+      </div>
+
+      <!-- Fallback Alert for Legacy Jobs -->
+      <div id="quality-legacy-alert" class="quality-fallback-box hidden" role="note">
+        <span class="fallback-icon">⚠️</span>
+        <div class="fallback-body">
+          <strong id="quality-fallback-title">Chưa kiểm tra chất lượng (phiên cũ)</strong>
+          <p id="quality-fallback-desc">
+            Phiên này được thu thập trước phiên bản v0.3 hoặc chưa có tệp phân tích chất lượng. Bảng dữ liệu hiển thị bản ghi gốc (v1) và chưa được áp dụng các bộ lọc an toàn về giá hay giờ mở cửa.
+          </p>
+          <div class="quality-fallback-actions">
+            <button type="button" id="btn-reclassify-quality" class="btn btn-primary btn-sm">
+              <span class="btn-icon">🛡️</span> Kiểm định dữ liệu đã lưu
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quality Metrics Grid -->
+      <div id="quality-metrics-content" class="quality-grid">
+        <!-- Card 1: Price Quality Analysis -->
+        <div class="quality-card price-quality-card">
+          <div class="quality-card-header">
+            <h3 class="quality-card-title">💰 Phân tích khoảng giá</h3>
+            <span class="badge badge-sm badge-secondary">Khoảng giá quán</span>
+          </div>
+          <div class="quality-stats-list">
+            <div class="stat-row stat-success">
+              <span class="stat-label">Khoảng giá dương đúng thứ tự:</span>
+              <strong id="stat-price-ok" class="stat-value">0</strong>
+            </div>
+            <div class="stat-row stat-warning">
+              <span class="stat-label">Chưa xác minh giá (0 ₫ - 0 ₫):</span>
+              <strong id="stat-price-zero" class="stat-value">0</strong>
+            </div>
+            <div class="stat-row stat-danger">
+              <span class="stat-label">Giá tối thiểu lớn hơn giá tối đa (đảo chiều):</span>
+              <strong id="stat-price-reversed" class="stat-value">0</strong>
+            </div>
+            <div class="stat-row stat-muted">
+              <span class="stat-label">Giá thiếu hoặc không hợp lệ:</span>
+              <strong id="stat-price-other" class="stat-value">0</strong>
+            </div>
+          </div>
+          <p class="quality-card-hint">
+            💡 <em>Khoảng giá quán (Khoảng giá toàn quán, không phải ngân sách món ăn). Khoảng giá dương đúng thứ tự là cấu trúc giá hợp lệ để lọc, không xác minh giá hiện tại thực tế. Giá tối thiểu lớn hơn giá tối đa hoặc giá 0đ không được sử dụng.</em>
+          </p>
+        </div>
+
+        <!-- Card 2: Issue Severities -->
+        <div class="quality-card issues-quality-card">
+          <div class="quality-card-header">
+            <h3 class="quality-card-title">⚠️ Các vấn đề dữ liệu</h3>
+            <span id="badge-total-issues" class="badge badge-sm badge-secondary">0 vấn đề</span>
+          </div>
+          <div class="quality-stats-list">
+            <div class="stat-row stat-danger">
+              <span class="stat-label">Lỗi nghiêm trọng:</span>
+              <strong id="stat-issues-error" class="stat-value">0</strong>
+            </div>
+            <div class="stat-row stat-warning">
+              <span class="stat-label">Cảnh báo chất lượng:</span>
+              <strong id="stat-issues-warning" class="stat-value">0</strong>
+            </div>
+            <div class="stat-row stat-info">
+              <span class="stat-label">Thông tin ghi nhận:</span>
+              <strong id="stat-issues-info" class="stat-value">0</strong>
+            </div>
+          </div>
+          <p class="quality-card-hint">
+            🔍 <em>Các vấn đề được ghi nhận đầy đủ vào tệp <code>issues.csv</code> / <code>json</code> để người dùng dễ dàng đối soát.</em>
+          </p>
+        </div>
+
+        <!-- Card 3: Eligibility & Tour Readiness -->
+        <div class="quality-card eligibility-card">
+          <div class="quality-card-header">
+            <h3 class="quality-card-title">🎯 Tính sẵn sàng sử dụng</h3>
+            <span class="badge badge-sm badge-secondary">Chuẩn v0.3</span>
+          </div>
+          <div class="quality-stats-list">
+            <div class="stat-row">
+              <span class="stat-label">Đủ điều kiện tìm kiếm:</span>
+              <strong id="stat-elig-search" class="stat-value">0</strong>
+            </div>
+            <div class="stat-row">
+              <span class="stat-label">Đủ điều kiện vị trí (Hà Nội):</span>
+              <strong id="stat-elig-location" class="stat-value">0</strong>
+            </div>
+            <div class="stat-row">
+              <span class="stat-label">Đủ điều kiện lọc theo giá:</span>
+              <strong id="stat-elig-price-filter" class="stat-value">0</strong>
+            </div>
+            <div class="stat-row stat-muted">
+              <span class="stat-label">Đủ điều kiện ngân sách món:</span>
+              <strong id="stat-elig-budget" class="stat-value">0 (Chưa hỗ trợ)</strong>
+            </div>
+            <div class="stat-row stat-muted">
+              <span class="stat-label">Đủ điều kiện giờ mở cửa:</span>
+              <strong id="stat-elig-hours" class="stat-value">0 (Chưa rõ thứ)</strong>
+            </div>
+          </div>
+          <p class="quality-card-hint">
+            ⏰ <em>Tọa độ đủ điều kiện trong phạm vi Hà Nội, chưa xác minh vị trí cửa quán. Chưa rõ quy ước thứ (mã 3), không suy đoán quán đóng cửa (không kết luận đóng cửa). Ngân sách món cần bằng chứng thực đơn riêng lẻ.</em>
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 2.8: Menu & Photos Management Panel (v0.5) -->
+    <section class="card media-section" id="media-section" aria-labelledby="heading-media">
+      <!-- Section Header -->
+      <div class="card-header media-header">
+        <div>
+          <h2 id="heading-media" class="card-title">🍽️ Menu & Hình Ảnh Địa Điểm (v0.5)</h2>
+          <p id="media-subtitle" class="card-subtitle">
+            Phiên đang xem: <code id="media-viewing-job" class="meta-code">Chưa chọn phiên</code>
+          </p>
+        </div>
+        <div class="media-header-badges">
+          <span id="badge-media-scanned" class="badge badge-secondary">Chưa quét dữ liệu</span>
+          <span id="badge-media-task-state" class="badge badge-idle hidden">Chờ lệnh</span>
+          <span id="media-busy-spinner" class="media-busy-spinner hidden">⏳ Đang xử lý...</span>
+        </div>
+      </div>
+
+      <!-- No Job Selected / Fallback Note -->
+      <div id="media-empty-alert" class="info-callout">
+        <span class="callout-icon">💡</span>
+        <div class="callout-body">
+          <strong>Chưa chọn phiên dữ liệu:</strong>
+          <span>Vui lòng chọn một phiên trong bảng lịch sử bên dưới hoặc bắt đầu phiên mới để xem và quản lý thực đơn & hình ảnh.</span>
+        </div>
+      </div>
+
+      <!-- Media Content Container (shown when a job is selected) -->
+      <div id="media-main-content" class="media-main-content hidden">
+
+        <!-- Action Buttons Toolbar -->
+        <div class="media-toolbar">
+          <div class="media-action-buttons">
+            <button type="button" id="btn-media-scan" class="btn btn-primary" title="Đọc các trang HTML đã lưu trong bộ nhớ đệm, 0 yêu cầu mạng">
+              <span class="btn-icon">🔍</span> Quét menu/ảnh từ dữ liệu đã lưu (không tải mạng)
+            </button>
+            <button type="button" id="btn-media-collect" class="btn btn-warning" title="Gửi yêu cầu tải các trang thực đơn và album ảnh từ Foody">
+              <span class="btn-icon">🌐</span> Thu thập menu & danh sách ảnh (có tải mạng)
+            </button>
+            <button type="button" id="btn-media-images" class="btn btn-success" title="Tải các tệp hình ảnh về máy theo danh sách đã phát hiện">
+              <span class="btn-icon">📥</span> Tải ảnh về máy
+            </button>
+            <button type="button" id="btn-media-ocr" class="btn btn-secondary" title="OCR cục bộ trên ảnh thực đơn đã tải (không dùng mạng). Thử nghiệm: kết quả luôn cần kiểm tra.">
+              <span class="btn-icon">🔤</span> OCR ảnh thực đơn (thử nghiệm, cục bộ)
+            </button>
+          </div>
+          <div class="media-task-controls">
+            <button type="button" id="btn-media-pause" class="btn btn-secondary btn-sm" disabled title="Tạm dừng tác vụ đang chạy">
+              <span class="btn-icon">⏸</span> Tạm dừng
+            </button>
+            <button type="button" id="btn-media-resume" class="btn btn-secondary btn-sm" disabled title="Tiếp tục tác vụ đã tạm dừng">
+              <span class="btn-icon">⏯</span> Tiếp tục
+            </button>
+            <button type="button" id="btn-media-stop" class="btn btn-danger btn-sm" disabled title="Dừng tác vụ đang chạy">
+              <span class="btn-icon">⏹</span> Dừng
+            </button>
+          </div>
+        </div>
+
+        <!-- Task Live Progress Card (shown when task running/paused or recently ended) -->
+        <div id="media-task-progress-box" class="media-task-progress-box hidden">
+          <div class="task-progress-header">
+            <div class="task-progress-meta">
+              <span id="media-task-kind-badge" class="badge badge-info">Tác vụ</span>
+              <span id="media-task-state-badge" class="badge badge-running">Đang chạy</span>
+              <strong id="media-task-msg" class="task-msg">Đang xử lý...</strong>
+            </div>
+            <span id="media-task-limit-badge" class="badge badge-warning hidden">Chạm giới hạn</span>
+          </div>
+
+          <!-- Stop Reason / Limit Notice Alert -->
+          <div id="media-task-stop-alert" class="termination-box hidden">
+            <span class="termination-icon">⚠️</span>
+            <div class="termination-body">
+              <strong id="media-task-stop-title">Lý do dừng:</strong>
+              <p id="media-task-stop-desc"></p>
+            </div>
+          </div>
+
+          <!-- Progress Track -->
+          <div class="progress-section">
+            <div class="progress-info-row">
+              <span id="media-progress-label" class="progress-label">Tiến trình xử lý:</span>
+              <strong id="media-progress-counter" class="progress-value">0 / 0</strong>
+            </div>
+            <div class="progress-track" role="progressbar" id="media-progress-bar-container" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+              <div id="media-progress-fill" class="progress-fill pct-0"></div>
+            </div>
+          </div>
+
+          <!-- Task Metrics Grid -->
+          <div class="metrics-grid media-task-metrics">
+            <div class="metric-card">
+              <span class="metric-num" id="media-metric-venues-done">0 / 0</span>
+              <span class="metric-label">Quán đã xử lý</span>
+            </div>
+            <div class="metric-card">
+              <span class="metric-num" id="media-metric-page-reqs">0</span>
+              <span class="metric-label" id="media-metric-page-bytes-label">Yêu cầu trang (0 B)</span>
+            </div>
+            <div class="metric-card">
+              <span class="metric-num" id="media-metric-image-reqs">0</span>
+              <span class="metric-label" id="media-metric-image-bytes-label">Yêu cầu ảnh (0 B)</span>
+            </div>
+            <div class="metric-card muted">
+              <span class="metric-num" id="media-metric-api-reqs">0</span>
+              <span class="metric-label">Yêu cầu API</span>
+            </div>
+            <div class="metric-card success">
+              <span class="metric-num" id="media-metric-menu-items">0</span>
+              <span class="metric-label">Món ăn trích xuất</span>
+            </div>
+            <div class="metric-card info">
+              <span class="metric-num" id="media-metric-photos-listed">0</span>
+              <span class="metric-label">Ảnh phát hiện</span>
+            </div>
+            <div class="metric-card success">
+              <span class="metric-num" id="media-metric-images-ok">0</span>
+              <span class="metric-label">Ảnh tải thành công</span>
+            </div>
+            <div class="metric-card muted">
+              <span class="metric-num" id="media-metric-images-skipped">0</span>
+              <span class="metric-label">Ảnh có sẵn (bỏ qua)</span>
+            </div>
+            <div class="metric-card danger">
+              <span class="metric-num" id="media-metric-images-failed">0</span>
+              <span class="metric-label">Ảnh tải lỗi</span>
+            </div>
+            <div class="metric-card">
+              <span class="metric-num" id="media-metric-images-duplicate">0</span>
+              <span class="metric-label">Ảnh trùng lặp</span>
+            </div>
+          </div>
+
+          <!-- Task Errors Accordion -->
+          <details id="media-task-errors-accordion" class="logs-accordion hidden">
+            <summary class="logs-summary">
+              <span id="media-errors-summary-text">⚠️ Danh sách lỗi trong tiến trình (0 lỗi)</span>
+            </summary>
+            <div id="media-errors-container" class="logs-container"></div>
+          </details>
+        </div>
+
+        <!-- Coverage Summary Cards (Requirement 5) -->
+        <div class="media-coverage-grid">
+          <!-- Card 1: Venues & Cache -->
+          <div class="quality-card media-coverage-card">
+            <div class="quality-card-header">
+              <h3 class="quality-card-title">🏢 Quán & Bộ nhớ đệm</h3>
+              <span class="badge badge-sm badge-secondary">Phạm vi phiên</span>
+            </div>
+            <div class="quality-stats-list">
+              <div class="stat-row">
+                <span class="stat-label">Tổng số quán trong phiên:</span>
+                <strong id="cov-venues-total" class="stat-value">0</strong>
+              </div>
+              <div class="stat-row stat-success">
+                <span class="stat-label">Quán có trang lưu trong bộ đệm:</span>
+                <strong id="cov-venues-cached" class="stat-value">0</strong>
+              </div>
+              <div class="stat-row stat-info">
+                <span class="stat-label">Quán có liên kết giao hàng trên nguồn:</span>
+                <strong id="cov-venues-delivery" class="stat-value">0</strong>
+              </div>
+              <div class="stat-row stat-muted">
+                <span class="stat-label">Số trang đã tải trực tiếp:</span>
+                <strong id="cov-pages-fetched" class="stat-value">0</strong>
+              </div>
+            </div>
+            <div id="cov-delivery-badge-box" class="delivery-badge-box hidden">
+              <span class="badge badge-info">Có giao hàng trên nguồn (menu chưa thu thập)</span>
+            </div>
+          </div>
+
+          <!-- Card 2: Menu Text States -->
+          <div class="quality-card media-coverage-card">
+            <div class="quality-card-header">
+              <h3 class="quality-card-title">📋 Thực đơn chữ (/thuc-don)</h3>
+              <span class="badge badge-sm badge-secondary">Trung thực nguồn</span>
+            </div>
+            <div class="quality-stats-list">
+              <div class="stat-row stat-muted">
+                <span class="stat-label">Chưa thu thập:</span>
+                <strong id="cov-menu-not-collected" class="stat-value">0</strong>
+              </div>
+              <div class="stat-row stat-success">
+                <span class="stat-label">Có món ăn:</span>
+                <strong id="cov-menu-items-summary" class="stat-value">0 quán (0 món)</strong>
+              </div>
+              <div class="stat-row stat-warning">
+                <span class="stat-label">Nguồn trả về thực đơn chữ trống:</span>
+                <strong id="cov-menu-empty" class="stat-value">0</strong>
+              </div>
+              <div class="stat-row stat-danger">
+                <span class="stat-label">Bị chặn:</span>
+                <strong id="cov-menu-blocked" class="stat-value">0</strong>
+              </div>
+              <div class="stat-row stat-danger">
+                <span class="stat-label">Lỗi tạm thời:</span>
+                <strong id="cov-menu-error" class="stat-value">0</strong>
+              </div>
+            </div>
+            <p class="quality-card-hint">
+              💡 <em>"Chưa thu thập" không đồng nghĩa quán không có thực đơn. Chỉ khẳng định khi nguồn trả về thực đơn chữ trống.</em>
+            </p>
+          </div>
+
+          <!-- Card 3: Photos & Albums -->
+          <div class="quality-card media-coverage-card">
+            <div class="quality-card-header">
+              <h3 class="quality-card-title">🖼️ Ảnh thực đơn & Thư viện ảnh</h3>
+              <span class="badge badge-sm badge-secondary">Hình ảnh</span>
+            </div>
+            <div class="quality-stats-list">
+              <div class="stat-row stat-info">
+                <span class="stat-label">Quán khai báo có ảnh thực đơn:</span>
+                <strong id="cov-venues-menu-declared" class="stat-value">0</strong>
+              </div>
+              <div class="stat-row stat-success">
+                <span class="stat-label">Ảnh thực đơn đã liệt kê:</span>
+                <strong id="cov-menu-images-known" class="stat-value">0</strong>
+              </div>
+              <div class="stat-row">
+                <span class="stat-label">Quán khai báo có ảnh:</span>
+                <strong id="cov-venues-photos-declared" class="stat-value">0</strong>
+              </div>
+              <div class="stat-row stat-info">
+                <span class="stat-label">Tổng ảnh đã phát hiện:</span>
+                <strong id="cov-photos-known-summary" class="stat-value">0 ảnh (0 quán)</strong>
+              </div>
+              <div class="stat-row stat-success">
+                <span class="stat-label">Ảnh đã tải về máy:</span>
+                <strong id="cov-photos-downloaded-summary" class="stat-value">0 ảnh (0 B)</strong>
+              </div>
+            </div>
+            <p class="quality-card-hint">
+              📷 <em>Số lượng ảnh thực đơn khai báo trên thanh điều hướng hiển thị riêng biệt với ảnh đã được liệt kê thực tế.</em>
+            </p>
+          </div>
+        </div>
+
+        <!-- Scope & Limits Configuration Accordion -->
+        <details class="media-config-accordion" open>
+          <summary class="media-config-summary">
+            <span>⚙️ Thiết lập phạm vi thu thập & Giới hạn tải (Scope & Limits)</span>
+          </summary>
+          <div class="media-config-body">
+            <!-- Scope Selector (Requirement 2) -->
+            <div class="media-scope-panel">
+              <label class="form-label font-bold">Phạm vi áp dụng:</label>
+              <div class="segmented-control segmented-media-scope" role="radiogroup" aria-label="Phạm vi áp dụng">
+                <label class="segmented-option">
+                  <input type="radio" name="media-scope" id="scope-selected" value="selected" checked>
+                  <span class="segment-label">🎯 Quán đang chọn (<span id="scope-count-selected">0</span>)</span>
+                </label>
+                <label class="segmented-option">
+                  <input type="radio" name="media-scope" id="scope-menu-images" value="menu_images">
+                  <span class="segment-label">🖼️ Chỉ quán có ảnh thực đơn (<span id="scope-count-menu-images">0</span>)</span>
+                </label>
+                <label class="segmented-option">
+                  <input type="radio" name="media-scope" id="scope-all" value="all">
+                  <span class="segment-label">🌐 Tất cả quán trong đợt (<span id="scope-count-all">0</span>)</span>
+                </label>
+              </div>
+
+              <!-- Scope Info & Confirm Guard -->
+              <div class="scope-info-bar">
+                <span class="scope-text">
+                  Số lượng quán sẽ gửi yêu cầu: <strong id="display-scope-count">0</strong> quán
+                </span>
+                <span id="scope-default-hint" class="field-hint">Mặc định nhỏ (tối đa 25 quán đầu tiên được lọc).</span>
+              </div>
+
+              <!-- Explicit Confirmation Checkbox for scope > 25 -->
+              <div id="media-scope-confirm-box" class="media-confirm-box hidden">
+                <label class="checkbox-label" for="chk-media-confirm-network">
+                  <input type="checkbox" id="chk-media-confirm-network" class="form-checkbox">
+                  <span class="checkbox-text font-bold text-danger">
+                    ⚠️ Tôi hiểu sẽ gửi yêu cầu tới foody.vn cho hơn 25 quán
+                  </span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Limits Form (Requirement 3) -->
+            <div class="media-limits-grid">
+              <div class="form-group">
+                <label for="input-media-max-images-per-venue" class="form-label">
+                  Ảnh tối đa / quán:
+                  <span class="label-badge">Mặc định: 8</span>
+                </label>
+                <input type="number" id="input-media-max-images-per-venue" class="form-input" min="1" max="100" value="8">
+              </div>
+
+              <div class="form-group">
+                <label for="input-media-max-total-images" class="form-label">
+                  Tổng ảnh tối đa:
+                  <span class="label-badge">Mặc định: 200</span>
+                </label>
+                <input type="number" id="input-media-max-total-images" class="form-input" min="1" max="20000" value="200">
+              </div>
+
+              <div class="form-group">
+                <label for="input-media-max-bytes-per-image-mb" class="form-label">
+                  Dung lượng tối đa / ảnh (MB):
+                  <span class="label-badge">Mặc định: 8 MB</span>
+                </label>
+                <input type="number" id="input-media-max-bytes-per-image-mb" class="form-input" min="1" max="25" step="1" value="8">
+              </div>
+
+              <div class="form-group">
+                <label for="input-media-max-total-mb" class="form-label">
+                  Tổng dung lượng tải (MB):
+                  <span class="label-badge">Mặc định: 400 MB</span>
+                </label>
+                <input type="number" id="input-media-max-total-mb" class="form-input" min="1" max="20000" value="400">
+              </div>
+
+              <div class="form-group">
+                <label for="input-media-max-pages" class="form-label">
+                  Số trang tối đa:
+                  <span class="label-badge">Mặc định: 300</span>
+                </label>
+                <input type="number" id="input-media-max-pages" class="form-input" min="1" max="20000" value="300">
+              </div>
+
+              <div class="form-group">
+                <label for="input-media-interval" class="form-label">
+                  Giãn cách yêu cầu (giây):
+                  <span class="label-badge">≥2.0s thu thập, ≥0.5s ảnh</span>
+                </label>
+                <input type="number" id="input-media-interval" class="form-input" min="0.5" max="60" step="0.5" value="3.0">
+              </div>
+            </div>
+
+            <!-- Albums & Content Category Options -->
+            <div class="media-options-panel">
+              <span class="form-label font-bold">Album & Danh mục áp dụng:</span>
+              <div class="media-checkbox-grid">
+                <label class="checkbox-label" for="chk-album-thuc-don">
+                  <input type="checkbox" id="chk-album-thuc-don" class="form-checkbox" value="album-thuc-don" checked>
+                  <span class="checkbox-text">Thực đơn (<code>album-thuc-don</code>)</span>
+                </label>
+                <label class="checkbox-label" for="chk-album-mon-an">
+                  <input type="checkbox" id="chk-album-mon-an" class="form-checkbox" value="album-mon-an" checked>
+                  <span class="checkbox-text">Món ăn (<code>album-mon-an</code>)</span>
+                </label>
+                <label class="checkbox-label" for="chk-album-khong-gian">
+                  <input type="checkbox" id="chk-album-khong-gian" class="form-checkbox" value="album-khong-gian">
+                  <span class="checkbox-text">Không gian (<code>album-khong-gian</code>)</span>
+                </label>
+                <label class="checkbox-label" for="chk-album-tong-hop">
+                  <input type="checkbox" id="chk-album-tong-hop" class="form-checkbox" value="album-tong-hop">
+                  <span class="checkbox-text">Tổng hợp (<code>album-tong-hop</code>)</span>
+                </label>
+                <label class="checkbox-label" for="chk-album-home">
+                  <input type="checkbox" id="chk-album-home" class="form-checkbox" value="home">
+                  <span class="checkbox-text">Ảnh cộng đồng trên trang chủ (<code>home</code>)</span>
+                </label>
+              </div>
+
+              <div class="media-checkbox-grid border-top pt-2 mt-2">
+                <label class="checkbox-label" for="chk-media-menu">
+                  <input type="checkbox" id="chk-media-menu" class="form-checkbox" checked>
+                  <span class="checkbox-text font-bold">Thu thập thực đơn chữ (<code>/thuc-don</code>)</span>
+                </label>
+                <label class="checkbox-label" for="chk-media-menu-images-only">
+                  <input type="checkbox" id="chk-media-menu-images-only" class="form-checkbox">
+                  <span class="checkbox-text font-bold">Chỉ tải ảnh thuộc thực đơn</span>
+                </label>
+                <label class="checkbox-label" for="chk-media-refresh">
+                  <input type="checkbox" id="chk-media-refresh" class="form-checkbox">
+                  <span class="checkbox-text text-muted">Tải lại các trang đã có trong bộ nhớ đệm (refresh)</span>
+                </label>
+              </div>
+            </div>
+          </div>
+        </details>
+
+        <!-- Downloads Cluster (Requirement 1, 8, 17) -->
+        <div class="media-downloads-panel">
+          <div class="media-downloads-header">
+            <div>
+              <span class="download-subgroup-label font-bold">Tải tệp xuất dữ liệu Menu & Ảnh (v0.5):</span>
+              <p class="media-notice-text">
+                ⚠️ Ảnh chỉ lưu cục bộ để nghiên cứu cá nhân; không đăng công khai (bản quyền thuộc nguồn/chủ ảnh).
+              </p>
+            </div>
+          </div>
+          <div class="media-download-buttons">
+            <button type="button" id="btn-media-dl-menu-csv" class="btn btn-outline btn-sm" disabled title="Tải danh sách món ăn CSV">
+              <span class="btn-icon">📋</span> Menu (CSV)
+            </button>
+            <button type="button" id="btn-media-dl-menu-json" class="btn btn-outline btn-sm" disabled title="Tải danh sách món ăn JSON">
+              <span class="btn-icon">📋</span> Menu (JSON)
+            </button>
+            <button type="button" id="btn-media-dl-photos-csv" class="btn btn-outline btn-sm" disabled title="Tải manifest danh sách ảnh CSV">
+              <span class="btn-icon">📷</span> Danh sách ảnh (CSV)
+            </button>
+            <button type="button" id="btn-media-dl-photos-json" class="btn btn-outline btn-sm" disabled title="Tải manifest danh sách ảnh JSON">
+              <span class="btn-icon">📷</span> Danh sách ảnh (JSON)
+            </button>
+            <button type="button" id="btn-media-dl-menu-images-csv" class="btn btn-outline btn-sm" disabled title="Tải danh sách ảnh thực đơn CSV">
+              <span class="btn-icon">🖼️</span> Ảnh thực đơn (CSV)
+            </button>
+            <button type="button" id="btn-media-dl-ocr-csv" class="btn btn-outline btn-sm" title="Kết quả OCR (CSV) — chưa kiểm chứng, cần xem lại">
+              <span class="btn-icon">🔤</span> OCR thực đơn (CSV, chưa kiểm chứng)
+            </button>
+            <button type="button" id="btn-media-dl-ocr-json" class="btn btn-outline btn-sm" title="Kết quả OCR (JSON) — chưa kiểm chứng, cần xem lại">
+              <span class="btn-icon">🔤</span> OCR thực đơn (JSON)
+            </button>
+            <button type="button" id="btn-media-dl-venues-csv" class="btn btn-outline btn-sm" disabled title="Tải dữ liệu tổng hợp quán & đa phương tiện CSV">
+              <span class="btn-icon">🏢</span> Quán & Đa phương tiện (CSV)
+            </button>
+            <button type="button" id="btn-media-dl-archive" class="btn btn-primary-outline btn-sm" disabled title="Tải gói tệp nén ZIP chứa tất cả ảnh đã tải về">
+              <span class="btn-icon">📦</span> Tải tệp nén ảnh (ZIP)
+            </button>
+          </div>
+        </div>
+
+        <!-- Venue Table Toolbar (Search, Filter, Paging) (Requirement 6) -->
+        <div class="media-venues-section">
+          <div class="media-venues-toolbar">
+            <div class="toolbar-left">
+              <h3 class="media-section-subtitle">Danh sách địa điểm & Đa phương tiện</h3>
+              <span id="media-venues-total-label" class="card-subtitle">Hiển thị 0 quán</span>
+            </div>
+            <div class="toolbar-controls">
+              <!-- Search Input -->
+              <div class="search-box">
+                <input type="text" id="input-media-search" class="form-input form-input-sm" placeholder="Tìm tên quán hoặc mã quán...">
+              </div>
+
+              <!-- Filter Select -->
+              <div class="filter-box">
+                <select id="select-media-filter" class="form-input form-input-sm">
+                  <option value="">Tất cả quán</option>
+                  <option value="menu_images">Chỉ quán có ảnh thực đơn</option>
+                  <option value="menu_text">Chỉ quán có thực đơn chữ</option>
+                  <option value="photos">Chỉ quán có ảnh</option>
+                  <option value="downloaded">Chỉ quán đã tải ảnh</option>
+                  <option value="delivery">Chỉ quán có giao hàng</option>
+                </select>
+              </div>
+
+              <!-- Select page size -->
+              <select id="select-media-limit" class="form-input form-input-sm">
+                <option value="25" selected>25 quán / trang</option>
+                <option value="50">50 quán / trang</option>
+                <option value="100">100 quán / trang</option>
+              </select>
+
+              <!-- Selection Helpers -->
+              <button type="button" id="btn-media-select-page" class="btn btn-secondary btn-sm" title="Chọn tất cả 25 quán trên trang hiện tại">
+                Chọn trang này
+              </button>
+              <button type="button" id="btn-media-clear-selection" class="btn btn-secondary btn-sm" title="Bỏ chọn tất cả các quán">
+                Bỏ chọn
+              </button>
+            </div>
+          </div>
+
+          <!-- Venues Table -->
+          <div class="table-responsive">
+            <table id="media-venues-table" class="data-table">
+              <thead>
+                <tr>
+                  <th scope="col" class="col-checkbox">
+                    <input type="checkbox" id="chk-media-select-all-page" class="form-checkbox" title="Chọn tất cả quán trên trang này">
+                  </th>
+                  <th scope="col" class="col-name">Tên quán</th>
+                  <th scope="col" class="col-menu-status">Thực đơn chữ</th>
+                  <th scope="col" class="col-menu-images">Ảnh thực đơn</th>
+                  <th scope="col" class="col-photos">Ảnh tổng hợp</th>
+                  <th scope="col" class="col-flags">Ghi chú & Cờ</th>
+                  <th scope="col" class="col-actions">Thao tác</th>
+                </tr>
+              </thead>
+              <tbody id="media-venues-tbody">
+                <tr class="empty-row">
+                  <td colspan="7" class="text-center text-muted">Đang tải danh sách quán...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Paging Navigation Bar -->
+          <div class="media-pagination">
+            <span id="media-paging-info" class="paging-info">Trang 1 / 1</span>
+            <div class="paging-buttons">
+              <button type="button" id="btn-media-prev" class="btn btn-secondary btn-sm" disabled>‹ Trang trước</button>
+              <button type="button" id="btn-media-next" class="btn btn-secondary btn-sm" disabled>Trang sau ›</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Venue Detail Drawer / Modal Panel (Requirement 6) -->
+        <div id="media-venue-detail-modal" class="venue-detail-modal hidden" role="dialog" aria-modal="true" aria-labelledby="detail-venue-name">
+          <div class="venue-detail-backdrop" id="venue-detail-backdrop"></div>
+          <div class="venue-detail-dialog">
+            <div class="venue-detail-header">
+              <div>
+                <h3 id="detail-venue-name" class="detail-venue-title">Chi tiết quán</h3>
+                <div class="detail-venue-meta">
+                  <span>Mã quán: <code id="detail-venue-id"></code></span> ·
+                  <a id="detail-venue-url" href="#" target="_blank" rel="noopener noreferrer">Xem trên Foody ↗</a>
+                </div>
+              </div>
+              <button type="button" id="btn-close-venue-detail" class="btn-close-banner" aria-label="Đóng chi tiết">×</button>
+            </div>
+
+            <!-- Mandatory Note: dish groups and price ranges are NOT menu items/prices -->
+            <div class="info-callout detail-note-callout">
+              <span class="callout-icon">💡</span>
+              <div class="callout-body">
+                <strong>Lưu ý quan trọng:</strong>
+                <span>Nhóm món và khoảng giá quán không phải món/giá trong thực đơn. Thực đơn chi tiết chỉ gồm các món do nguồn cung cấp trong trang thực đơn.</span>
+              </div>
+            </div>
+
+            <div class="venue-detail-body">
+              <!-- Tab Navigation -->
+              <div class="segmented-control segmented-sm detail-tabs" role="tablist">
+                <button type="button" id="tab-btn-photos" class="detail-tab-btn active" role="tab" aria-selected="true">
+                  📷 Thư viện ảnh (<span id="detail-photos-count">0</span>)
+                </button>
+                <button type="button" id="tab-btn-menu" class="detail-tab-btn" role="tab" aria-selected="false">
+                  📋 Thực đơn món ăn (<span id="detail-menu-items-count">0</span>)
+                </button>
+              </div>
+
+              <!-- Tab Panel 1: Photos Gallery Grid -->
+              <div id="tab-panel-photos" class="detail-tab-panel" role="tabpanel">
+                <div id="detail-photos-container" class="detail-photos-container">
+                  <p class="text-muted text-center py-4">Chưa có ảnh nào cho quán này.</p>
+                </div>
+              </div>
+
+              <!-- Tab Panel 2: Menu Items Table -->
+              <div id="tab-panel-menu" class="detail-tab-panel hidden" role="tabpanel">
+                <div class="table-responsive">
+                  <table class="data-table menu-items-table">
+                    <thead>
+                      <tr>
+                        <th scope="col">STT</th>
+                        <th scope="col">Nhóm món</th>
+                        <th scope="col">Tên món</th>
+                        <th scope="col">Giá tiền</th>
+                      </tr>
+                    </thead>
+                    <tbody id="detail-menu-tbody">
+                      <tr class="empty-row">
+                        <td colspan="4" class="text-center text-muted">Chưa có món ăn nào trong thực đơn chữ.</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Section 3: Data Preview & Downloads -->
+    <section class="card preview-section" aria-labelledby="heading-preview">
+      <div class="card-header preview-header">
+        <div class="preview-title-block">
+          <h2 id="heading-preview" class="card-title">📋 Bảng Xem Trước Dữ Liệu</h2>
+          <p id="preview-total-text" class="card-subtitle">Hiển thị 0 địa điểm đã trích xuất</p>
+          <div class="preview-layer-controls">
+            <span class="layer-control-label">Lớp dữ liệu:</span>
+            <div class="segmented-control segmented-sm" role="radiogroup" aria-label="Lớp dữ liệu xem trước">
+              <label class="segmented-option">
+                <input type="radio" name="preview-layer" id="layer-enriched" value="enriched">
+                <span class="segment-label">🔮 Làm giàu (v0.4)</span>
+              </label>
+              <label class="segmented-option">
+                <input type="radio" name="preview-layer" id="layer-normalized" value="normalized" checked>
+                <span class="segment-label">✨ Chuẩn hóa (v0.3)</span>
+              </label>
+              <label class="segmented-option">
+                <input type="radio" name="preview-layer" id="layer-raw" value="raw">
+                <span class="segment-label">📄 Dữ liệu gốc (v1)</span>
+              </label>
+            </div>
+            <span id="badge-preview-layer" class="badge badge-info">Dữ liệu đã chuẩn hóa</span>
+          </div>
+        </div>
+
+        <div class="preview-actions">
+          <div class="download-cluster">
+            <div class="download-subgroup enrich-subgroup" id="download-group-enriched">
+              <span class="download-subgroup-label">Làm giàu chi tiết (v0.4):</span>
+              <a id="btn-download-enriched-csv" class="btn btn-outline btn-sm" href="#" role="button" aria-disabled="true" title="Tải dữ liệu làm giàu CSV">
+                <span class="btn-icon">🔮</span> Làm giàu (CSV)
+              </a>
+              <a id="btn-download-enriched-json" class="btn btn-outline btn-sm" href="#" role="button" aria-disabled="true" title="Tải dữ liệu làm giàu JSON">
+                <span class="btn-icon">🔮</span> Làm giàu (JSON)
+              </a>
+              <a id="btn-download-enrichment-report" class="btn btn-outline btn-sm" href="#" role="button" aria-disabled="true" title="Tải báo cáo làm giàu JSON">
+                <span class="btn-icon">📊</span> Báo cáo làm giàu
+              </a>
+              <button type="button" id="btn-enrich-job" class="btn btn-primary-outline btn-sm" title="Làm giàu dữ liệu từ bộ nhớ đệm (v0.4)">
+                <span class="btn-icon">⚡</span> Làm giàu dữ liệu
+              </button>
+            </div>
+            <div class="download-subgroup">
+              <span class="download-subgroup-label">Chuẩn hóa & Chất lượng (v0.3):</span>
+              <a id="btn-download-norm-csv" class="btn btn-outline btn-sm" href="#" role="button" aria-disabled="true" title="Tải dữ liệu chuẩn hóa CSV">
+                <span class="btn-icon">✨</span> Chuẩn hóa (CSV)
+              </a>
+              <a id="btn-download-norm-json" class="btn btn-outline btn-sm" href="#" role="button" aria-disabled="true" title="Tải dữ liệu chuẩn hóa JSON">
+                <span class="btn-icon">✨</span> Chuẩn hóa (JSON)
+              </a>
+              <a id="btn-download-issues-csv" class="btn btn-outline btn-sm" href="#" role="button" aria-disabled="true" title="Tải danh sách vấn đề CSV">
+                <span class="btn-icon">⚠️</span> Vấn đề (CSV)
+              </a>
+              <a id="btn-download-issues-json" class="btn btn-outline btn-sm" href="#" role="button" aria-disabled="true" title="Tải danh sách vấn đề JSON">
+                <span class="btn-icon">⚠️</span> Vấn đề (JSON)
+              </a>
+              <a id="btn-download-quality" class="btn btn-outline btn-sm" href="#" role="button" aria-disabled="true" title="Tải báo cáo chất lượng JSON">
+                <span class="btn-icon">🛡️</span> Báo cáo chất lượng
+              </a>
+              <a id="btn-download-raw" class="btn btn-outline btn-sm" href="#" role="button" aria-disabled="true" title="Tải dữ liệu thô JSON kèm provenance">
+                <span class="btn-icon">📦</span> Dữ liệu thô
+              </a>
+            </div>
+            <div class="download-subgroup legacy-subgroup">
+              <span class="download-subgroup-label">Dữ liệu gốc (v1):</span>
+              <a id="btn-download-csv" class="btn btn-outline btn-sm" href="#" role="button" aria-disabled="true" title="Tải tệp CSV gốc (v1)">
+                <span class="btn-icon">📥</span> CSV gốc
+              </a>
+              <a id="btn-download-json" class="btn btn-outline btn-sm" href="#" role="button" aria-disabled="true" title="Tải tệp JSON gốc (v1)">
+                <span class="btn-icon">📥</span> JSON gốc
+              </a>
+              <a id="btn-download-report" class="btn btn-outline btn-sm" href="#" role="button" aria-disabled="true" title="Tải báo cáo tổng kết">
+                <span class="btn-icon">📄</span> Báo cáo tổng kết
+              </a>
+            </div>
+          </div>
+          <button type="button" id="btn-refresh-preview" class="btn btn-secondary btn-sm">
+            <span class="btn-icon">🔄</span> Tải lại bảng
+          </button>
+        </div>
+      </div>
+
+      <!-- Enrichment Honest Copy Disclaimer (v0.4) -->
+      <div id="enrichment-disclaimer" class="info-callout enrichment-callout hidden">
+        <span class="callout-icon">💡</span>
+        <div class="callout-body">
+          <strong>Minh bạch thông tin dữ liệu làm giàu (v0.4):</strong>
+          <ul class="honest-copy-list">
+            <li><strong>Nhóm món:</strong> Nhóm món là phân loại danh mục tổng quát do Foody ghi nhận, không phải thực đơn chi tiết hay danh sách món ăn đầy đủ.</li>
+            <li><strong>Khoảng giá quán:</strong> Khoảng giá toàn quán là mức tham khảo do quán công bố, không tương đương ngân sách cho một suất ăn hay món ăn riêng lẻ.</li>
+            <li><strong>Điểm đánh giá:</strong> Điểm đánh giá (thang điểm 10) và số lượng bình luận là tín hiệu tổng hợp từ người dùng trên nền tảng Foody, không phải chứng nhận chất lượng đã kiểm định độc lập hay tình trạng hoạt động thực tế hiện tại của quán.</li>
+            <li><strong>Tiện ích:</strong> Tiện ích màu xanh là nền tảng ghi nhận có; tiện ích màu xám hiển thị "chưa xác nhận" (nền tảng không đánh dấu có, không phải xác minh là quán không có tiện ích này; platform-asserted / unconfirmed), chưa được kiểm định độc lập tại thực địa.</li>
+            <li><strong>Giờ mở cửa:</strong> Giờ mở cửa phản ánh dữ liệu nguồn tại thời điểm thu thập, không phải lịch hoạt động hàng tuần đã xác minh (chưa rõ quy ước thứ).</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Filters Toolbar (v0.4) -->
+      <div id="preview-filter-toolbar" class="filter-toolbar hidden">
+        <div class="filter-toolbar-header">
+          <span class="filter-title">🔍 Bộ lọc dữ liệu làm giàu:</span>
+          <span id="filter-status-hint" class="filter-hint">Lọc theo các tiêu chí đã làm giàu</span>
+          <button type="button" id="btn-reset-filters" class="btn btn-secondary btn-sm">
+            <span class="btn-icon">↺</span> Đặt lại bộ lọc
+          </button>
+        </div>
+        <div class="filter-grid">
+          <div class="filter-item">
+            <label for="filter-cuisine" class="filter-label">Phong cách ẩm thực:</label>
+            <input type="text" id="filter-cuisine" class="form-input form-input-sm" placeholder="Ví dụ: Món Việt, Châu Á...">
+          </div>
+          <div class="filter-item">
+            <label for="filter-venue-type" class="filter-label">Thể loại:</label>
+            <input type="text" id="filter-venue-type" class="form-input form-input-sm" placeholder="Ví dụ: Quán ăn, Nhà hàng...">
+          </div>
+          <div class="filter-item">
+            <label for="filter-dish-group" class="filter-label" title="Danh mục tổng quát, không phải thực đơn chi tiết">Nhóm món:</label>
+            <input type="text" id="filter-dish-group" class="form-input form-input-sm" placeholder="Ví dụ: Bún, Phở, Lẩu...">
+          </div>
+          <div class="filter-item">
+            <label for="filter-suitable-meal" class="filter-label">Bữa ăn thích hợp:</label>
+            <input type="text" id="filter-suitable-meal" class="form-input form-input-sm" placeholder="Ví dụ: Bữa trưa, Bữa tối...">
+          </div>
+          <div class="filter-item">
+            <label for="filter-audience" class="filter-label">Phù hợp với:</label>
+            <input type="text" id="filter-audience" class="form-input form-input-sm" placeholder="Ví dụ: Gia đình, Nhóm bạn...">
+          </div>
+          <div class="filter-item filter-rating-group">
+            <label for="filter-min-rating" class="filter-label" title="Tín hiệu từ nền tảng Foody, không phải chất lượng kiểm định">Điểm đánh giá ≥ N:</label>
+            <div class="filter-flex-row">
+              <input type="number" id="filter-min-rating" class="form-input form-input-sm" step="0.1" min="0" max="10" placeholder="Điểm ≥">
+              <input type="number" id="filter-min-reviews" class="form-input form-input-sm" min="0" placeholder="Số đánh giá ≥">
+            </div>
+          </div>
+          <div class="filter-item">
+            <label for="filter-amenity" class="filter-label" title="Chỉ lọc các tiện ích có trạng thái có (yes)">Tiện ích có sẵn (chỉ lọc Có):</label>
+            <input type="text" id="filter-amenity" class="form-input form-input-sm" placeholder="Ví dụ: Wifi, Chỗ để ô tô...">
+          </div>
+          <div class="filter-item">
+            <label for="filter-prep-time" class="filter-label">Thời gian chuẩn bị:</label>
+            <input type="text" id="filter-prep-time" class="form-input form-input-sm" placeholder="Ví dụ: 10 phút...">
+          </div>
+          <div class="filter-item">
+            <label for="filter-capacity" class="filter-label">Sức chứa ≥ (người):</label>
+            <input type="number" id="filter-capacity" class="form-input form-input-sm" min="0" placeholder="Số người ≥">
+          </div>
+        </div>
+      </div>
+
+      <div class="table-responsive">
+        <table id="preview-table" class="data-table">
+          <thead id="preview-thead">
+            <tr id="preview-thead-row">
+              <th scope="col" class="col-index">STT</th>
+              <th scope="col" class="col-name">Tên quán</th>
+              <th scope="col" class="col-address">Địa chỉ</th>
+              <th scope="col" class="col-price">Khoảng giá tham khảo</th>
+              <th scope="col" class="col-hours">Giờ mở cửa</th>
+              <th scope="col" class="col-link">Liên kết</th>
+            </tr>
+          </thead>
+          <tbody id="preview-tbody">
+            <tr class="empty-row">
+              <td colspan="6" class="text-center text-muted">Chưa có dữ liệu địa điểm nào. Hãy bắt đầu phiên thu thập mới.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Section 4: History & Resume Sessions -->
+    <section class="card history-section" aria-labelledby="heading-history">
+      <div class="card-header">
+        <div>
+          <h2 id="heading-history" class="card-title">🕒 Lịch Sử Các Phiên Đã Chạy</h2>
+          <p class="card-subtitle">Danh sách các phiên thu thập được lưu trữ trên máy cục bộ</p>
+        </div>
+        <button type="button" id="btn-refresh-history" class="btn btn-secondary">
+          <span class="btn-icon">🔄</span> Cập nhật lịch sử
+        </button>
+      </div>
+
+      <!-- Resuming Guidance Note -->
+      <div class="info-callout">
+        <span class="callout-icon">💡</span>
+        <div class="callout-body">
+          <strong>Lưu ý khi tiếp tục phiên cũ:</strong>
+          <span>
+            Hệ thống sẽ tự động bỏ qua các địa điểm đã thu thập thành công trước đó. Trình duyệt tự động có thể sẽ duyệt lại danh sách từ đầu trang để phát hiện các liên kết chưa xử lý.
+          </span>
+        </div>
+      </div>
+
+      <div class="table-responsive">
+        <table id="history-table" class="data-table">
+          <thead>
+            <tr>
+              <th scope="col" class="col-job-id">Mã phiên</th>
+              <th scope="col" class="col-job-mode">Chế độ</th>
+              <th scope="col" class="col-job-state">Trạng thái</th>
+              <th scope="col" class="col-job-prog">Tiến trình</th>
+              <th scope="col" class="col-job-time">Thời điểm bắt đầu</th>
+              <th scope="col" class="col-job-actions">Thao tác</th>
+            </tr>
+          </thead>
+          <tbody id="history-tbody">
+            <tr class="empty-row">
+              <td colspan="6" class="text-center text-muted">Đang tải lịch sử phiên...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="app-footer">
+    <div class="footer-content">
+      <p class="footer-note">
+        <strong>Ghi chú dữ liệu:</strong> Thông tin tên quán, địa chỉ, khoảng giá và giờ mở cửa phản ánh dữ liệu công khai trên Foody Hà Nội tại thời điểm thu thập và mang tính chất tham khảo. Dự án chỉ phục vụ thử nghiệm và lưu trữ cục bộ trên máy tính cá nhân.
+      </p>
+    </div>
+  </footer>
+</body>
+</html>

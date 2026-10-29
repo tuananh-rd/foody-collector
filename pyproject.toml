@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "foody-tool"
+version = "0.5.0"
+description = "Private feasibility collector for public Foody restaurant pages"
+requires-python = ">=3.9"
+dependencies = []
+
+[project.optional-dependencies]
+browser = ["playwright>=1.64,<2"]
+
+[project.scripts]
+foody-tool = "foody_tool.__main__:main"
+
+[tool.setuptools]
+packages = ["foody_tool"]
+
+[tool.setuptools.package-data]
+foody_tool = ["web/*.html", "web/*.css", "web/*.js"]
